@@ -18,6 +18,8 @@ Create a Supabase table named `data` with columns:
    ```bash
    export SUPABASE_URL="https://your-project.supabase.co"
    export SUPABASE_KEY="your-service-role-or-anon-key"
+   # or use publishable key if you do not have a service role key:
+   export SUPABASE_PUBLISHABLE_KEY="your-publishable-key"
    ```
 3. Start the Flask app:
    ```bash

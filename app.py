@@ -6,9 +6,11 @@ from supabase import create_client, Client
 load_dotenv()
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or os.environ.get("SUPABASE_PUBLISHABLE_KEY")
 if not SUPABASE_URL or not SUPABASE_KEY:
-    raise RuntimeError("Missing SUPABASE_URL or SUPABASE_KEY environment variables")
+    raise RuntimeError(
+        "Missing SUPABASE_URL or SUPABASE_KEY / SUPABASE_PUBLISHABLE_KEY environment variables"
+    )
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 app = Flask(__name__)
@@ -43,8 +45,15 @@ DEFAULT_BUILDINGS = [
     'Village 1',
     'Village 2',
     'Village 3',
+    'Mathematics 3'
 ]
 TABLE_NAME = 'data'
+
+def raise_if_error(response, action=None):
+    if getattr(response, 'error', None):
+        action_name = action or 'Supabase request'
+        raise RuntimeError(f"{action_name} failed: {response.error}")
+
 
 def init_db():
     rows = [
@@ -55,13 +64,14 @@ def init_db():
         }
         for building in DEFAULT_BUILDINGS
     ]
-    supabase.table(TABLE_NAME).upsert(rows, on_conflict='building').execute()
+    response = supabase.table(TABLE_NAME).upsert(rows, on_conflict='building').execute()
+    raise_if_error(response)
 
 
 def get_buildings():
     response = supabase.table(TABLE_NAME).select('building').execute()
     if getattr(response, 'error', None):
-        return DEFAULT_BUILDINGS.copy()
+        raise_if_error(response, 'select buildings')
 
     rows = getattr(response, 'data', []) or []
     buildings = sorted({row.get('building') for row in rows if row.get('building')})
@@ -70,7 +80,9 @@ def get_buildings():
 
 def load_votes(building):
     response = supabase.table(TABLE_NAME).select('yes_votes,no_votes').eq('building', building).execute()
-    if getattr(response, 'error', None) or not getattr(response, 'data', []):
+    if getattr(response, 'error', None):
+        raise_if_error(response, 'load votes')
+    if not getattr(response, 'data', []):
         votes['yes'] = 0
         votes['no'] = 0
         return
@@ -99,7 +111,7 @@ def update_vote(building, choice):
     else:
         return
 
-    supabase.table(TABLE_NAME).upsert(
+    response = supabase.table(TABLE_NAME).upsert(
         {
             'building': building,
             'yes_votes': yes_votes,
@@ -107,6 +119,7 @@ def update_vote(building, choice):
         },
         on_conflict='building',
     ).execute()
+    raise_if_error(response, 'update vote')
 
 
 init_db()
