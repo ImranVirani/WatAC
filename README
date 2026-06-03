@@ -1,2 +1,14 @@
 Feeling too hot to have coherent thoughts?
 Look no further, WatAC will help you find where the AC is.
+
+## Run the app
+
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Start the Flask app:
+   ```bash
+   python app.py
+   ```
+3. Open `http://127.0.0.1:5000` in your browser.

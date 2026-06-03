@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WatAC Poll</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f7fb; color: #20232a; }
+      .page { max-width: 700px; margin: 0 auto; padding: 40px 20px; }
+      .card { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 12px 30px rgba(0,0,0,0.08); }
+      .buttons { display: flex; gap: 16px; margin-top: 20px; }
+      button { flex: 1; padding: 14px 20px; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+      button.yes { background: #0b74de; color: white; }
+      button.no { background: #ff6b6b; color: white; }
+      .results { margin-top: 28px; padding: 18px; background: #f5f9ff; border-radius: 10px; }
+      .stat { margin: 8px 0; }
+      .footer { margin-top: 28px; color: #5f6d7a; font-size: 0.95rem; }
+      .university { color: #0b74de; }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="card">
+        <h1>WatAC: AC Availability Poll</h1>
+        <p>Help students by letting us know whether a building location at the University of Waterloo has air conditioning.</p>
+
+        <form action="/" method="get" class="building-form">
+          <label for="building">Choose a building</label>
+          <select id="building" name="building" onchange="this.form.submit()">
+            {% for building in buildings %}
+            <option value="{{ building }}" {% if building == selected_building %}selected{% endif %}>{{ building }}</option>
+            {% endfor %}
+          </select>
+          <noscript><button type="submit">Load building</button></noscript>
+        </form>
+
+        <form action="/vote" method="post">
+          <input type="hidden" name="building" value="{{ selected_building }}">
+          <div class="buttons">
+            <button type="submit" name="choice" value="yes" class="yes">Yes, it has AC</button>
+            <button type="submit" name="choice" value="no" class="no">No, it does not</button>
+          </div>
+        </form>
+
+        <div class="results">
+          <h2>Current poll results for <span class="building-name">{{ selected_building }}</span></h2>
+          <div class="stat">Yes: <strong>{{ votes['yes'] }}</strong></div>
+          <div class="stat">No: <strong>{{ votes['no'] }}</strong></div>
+          <div class="stat">Total submissions: <strong>{{ total }}</strong></div>
+        </div>
+
+        <div class="footer">
+          <p>Use this poll to record whether a Waterloo location has air conditioning.</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
