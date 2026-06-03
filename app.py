@@ -1,9 +1,17 @@
 from flask import Flask, render_template, request, redirect, url_for
-import sqlite3
 import os
-app = Flask(__name__)
+from dotenv import load_dotenv
+from supabase import create_client, Client
 
-db = 'votes.db'
+load_dotenv()
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise RuntimeError("Missing SUPABASE_URL or SUPABASE_KEY environment variables")
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+app = Flask(__name__)
 
 votes = {'yes': 0, 'no': 0}
 DEFAULT_BUILDINGS = [
@@ -36,74 +44,69 @@ DEFAULT_BUILDINGS = [
     'Village 2',
     'Village 3',
 ]
+TABLE_NAME = 'data'
 
 def init_db():
-    conn = sqlite3.connect(db)
-    cursor = conn.cursor()
-    cursor.execute(
-        '''
-        CREATE TABLE IF NOT EXISTS data (
-            building TEXT PRIMARY KEY,
-            yes_votes INTEGER NOT NULL DEFAULT 0,
-            no_votes INTEGER NOT NULL DEFAULT 0
-        )
-        '''
-    )
-    for building in DEFAULT_BUILDINGS:
-        cursor.execute(
-            'INSERT OR IGNORE INTO data (building, yes_votes, no_votes) VALUES (?, 0, 0)',
-            (building,),
-        )
-    conn.commit()
-    conn.close()
+    rows = [
+        {
+            'building': building,
+            'yes_votes': 0,
+            'no_votes': 0,
+        }
+        for building in DEFAULT_BUILDINGS
+    ]
+    supabase.table(TABLE_NAME).upsert(rows, on_conflict='building').execute()
 
 
 def get_buildings():
-    conn = sqlite3.connect(db)
-    cursor = conn.cursor()
-    cursor.execute('SELECT DISTINCT building FROM data ORDER BY building')
-    rows = [row[0] for row in cursor.fetchall()]
-    conn.close()
-    return rows or DEFAULT_BUILDINGS.copy()
+    response = supabase.table(TABLE_NAME).select('building').execute()
+    if getattr(response, 'error', None):
+        return DEFAULT_BUILDINGS.copy()
+
+    rows = getattr(response, 'data', []) or []
+    buildings = sorted({row.get('building') for row in rows if row.get('building')})
+    return buildings or DEFAULT_BUILDINGS.copy()
 
 
 def load_votes(building):
-    conn = sqlite3.connect(db)
-    cursor = conn.cursor()
-    cursor.execute('SELECT yes_votes, no_votes FROM data WHERE building = ? LIMIT 1', (building,))
-    row = cursor.fetchone()
-    if row:
-        yes_votes, no_votes = row
-        votes['yes'] = yes_votes or 0
-        votes['no'] = no_votes or 0
-    else:
+    response = supabase.table(TABLE_NAME).select('yes_votes,no_votes').eq('building', building).execute()
+    if getattr(response, 'error', None) or not getattr(response, 'data', []):
         votes['yes'] = 0
         votes['no'] = 0
-    conn.close()
+        return
+
+    row = response.data[0]
+    votes['yes'] = row.get('yes_votes', 0) or 0
+    votes['no'] = row.get('no_votes', 0) or 0
 
 
 def update_vote(building, choice):
-    conn = sqlite3.connect(db)
-    cursor = conn.cursor()
+    response = supabase.table(TABLE_NAME).select('yes_votes,no_votes').eq('building', building).execute()
+    existing = getattr(response, 'data', []) or []
+
+    if existing:
+        current = existing[0]
+        yes_votes = current.get('yes_votes', 0) or 0
+        no_votes = current.get('no_votes', 0) or 0
+    else:
+        yes_votes = 0
+        no_votes = 0
+
     if choice == 'yes':
-        cursor.execute(
-            'UPDATE data SET yes_votes = yes_votes + 1 WHERE building = ?',
-            (building,),
-        )
+        yes_votes += 1
     elif choice == 'no':
-        cursor.execute(
-            'UPDATE data SET no_votes = no_votes + 1 WHERE building = ?',
-            (building,),
-        )
-    if cursor.rowcount == 0:
-        yes_votes = 1 if choice == 'yes' else 0
-        no_votes = 1 if choice == 'no' else 0
-        cursor.execute(
-            'INSERT INTO data (building, yes_votes, no_votes) VALUES (?, ?, ?)',
-            (building, yes_votes, no_votes),
-        )
-    conn.commit()
-    conn.close()
+        no_votes += 1
+    else:
+        return
+
+    supabase.table(TABLE_NAME).upsert(
+        {
+            'building': building,
+            'yes_votes': yes_votes,
+            'no_votes': no_votes,
+        },
+        on_conflict='building',
+    ).execute()
 
 
 init_db()
