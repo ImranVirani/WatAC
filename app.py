@@ -64,7 +64,7 @@ def init_db():
         }
         for building in DEFAULT_BUILDINGS
     ]
-    response = supabase.table(TABLE_NAME).insert(rows, ignore_duplicates=True).execute()
+    response = supabase.table(TABLE_NAME).upsert(rows, on_conflict='building').execute()
     raise_if_error(response)
 
 
@@ -122,7 +122,7 @@ def update_vote(building, choice):
     raise_if_error(response, 'update vote')
 
 
-init_db()
+# init_db()
 load_votes('Building A')
 @app.route('/', methods=['GET'])
 def home():
