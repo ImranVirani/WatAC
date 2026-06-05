@@ -1,28 +1,4 @@
 Feeling too hot to have coherent thoughts?
 Look no further, WatAC will help you find where the AC is.
 
-## Supabase setup
-
-Create a Supabase table named `data` with columns:
-- `building` text primary key
-- `yes_votes` integer
-- `no_votes` integer
-
-## Run the app
-
-1. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-2. Configure Supabase environment variables:
-   ```bash
-   export SUPABASE_URL="https://your-project.supabase.co"
-   export SUPABASE_KEY="your-service-role-or-anon-key"
-   # or use publishable key if you do not have a service role key:
-   export SUPABASE_PUBLISHABLE_KEY="your-publishable-key"
-   ```
-3. Start the Flask app:
-   ```bash
-   python app.py
-   ```
-4. Open `http://127.0.0.1:5000` in your browser.
+This project is currently being hosted on watac.onrender.com! Take a look! It might help you get out of this heat.
