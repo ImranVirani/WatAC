@@ -64,7 +64,7 @@ def init_db():
         }
         for building in DEFAULT_BUILDINGS
     ]
-    response = supabase.table(TABLE_NAME).upsert(rows, on_conflict='building').execute()
+    response = supabase.table(TABLE_NAME).insert(rows, ignore_duplicates=True).execute()
     raise_if_error(response)
 
 
